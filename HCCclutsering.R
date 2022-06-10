@@ -1,7 +1,7 @@
 library(bnclustOmics)
 
 #load HCC omics data
-HCCdata<-readRDS("HCCinputs/HCCdata.rds")
+HCCdata<-readRDS("/Users/polinasuter/Downloads/HCC/submit/HCCinputs/HCCdata.rds")
 names(HCCdata)
 dim(HCCdata$M) #24 M nodes
 dim(HCCdata$CN) #292 CN nodes
@@ -10,11 +10,15 @@ dim(HCCdata$P) # 116 P nodes
 dim(HCCdata$PP)#158 PP nodes
 
 #load penalization matrix
-HCCpm<-readRDS("HCCinputs/HCCpm.rds")
+HCCpm<-readRDS("/Users/polinasuter/Downloads/HCC/submit/HCCinputs/HCCpm.rds")
 dim(HCCpm) #all 778 nodes
+length(which(HCCpm==2))
+length(which(HCCpm==1))
+length(which(HCCpm<2))
+
 
 #load blacklist matrix
-HCCbl<-readRDS("HCCinputs/HCCbl.rds")
+HCCbl<-readRDS("/Users/polinasuter/Downloads/HCC/submit/HCCinputs/HCCbl.rds")
 
 #bnInfo object, needed only if different IDs aer used for different omics types
 #can be created from scratch with bnInfo function: see ?bnInfo
@@ -32,9 +36,9 @@ bnres<-bnclustOmics(HCCdata,namesHCC,HCCbl,HCCpm,epmatrix = TRUE,
 bnres<-readRDS("HCCresults/res_main.rds")
 
 #load p-values from DGE
-DElist<-readRDS(file="HCCresults/DElist.rds")
+DElist<-readRDS(file="/Users/polinasuter/Downloads/HCC/submit/HCCresults/DElist.rds")
 #load interactions from databases STRING; Omnipath: kinase-substrate and transcription factor-target
-DBlist<-readRDS(file="HCCinputs/DBlist.rds")
+DBlist<-readRDS(file="/Users/polinasuter/Downloads/HCC/submit/HCCinputs/DBlist.rds")
 #annotate edges from discovered networks
 #in the resulting data frame pcl denotes posterior probability of an edge in respective cluster
 intconstot<-annotateEdges(bnres,namesHCC,sump=1.2,minp=0.5,minkp=0.9,dblist=DBlist)

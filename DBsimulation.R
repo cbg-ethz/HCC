@@ -29,4 +29,4 @@ simsim<-simBNclust(nrep=50,
                    hardlimit=10,maxEM=6,plus1it=5,
                    p=0.5, startpoint="mclustPCA",ROC=TRUE,addalgos=FALSE,
                    onlyother=FALSE,edgep=usepm,savedata=FALSE,
-                   path=path,base=base,errRate=0.1)
+                   path=path,base=base,FPrate=0.1,FNrate=0.1)

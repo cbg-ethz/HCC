@@ -11,6 +11,31 @@ getModels<-function(ep, thresholds) {
   }
   return(res)
 }
+simedgepmat2<-function(BNmixt,pf=2,blacklist=FALSE,FNrate=0,FPrate=0){
+  edgepmat<-1*Reduce('|',BNmixt$DAGs)
+  if(FNrate>0) {
+    ones<-which(edgepmat==1)
+    lo<-length(ones)
+    totsamp<-ceiling(FNrate*lo)
+    edgepmat[ones[sample.int(lo,ceiling(totsamp/2))]]<-0
+  }
+
+  if(FPrate>0) {
+    zeros<-which(edgepmat==0)
+    ones<-which(edgepmat==1)
+    lo<-length(ones)
+    lz<-length(zeros)
+    totsamp<-ceiling(FPrate*lo)
+    edgepmat[zeros[sample.int(lz,ceiling(totsamp/2))]]<-1
+  }
+
+  if(blacklist) {
+    return(edgepmat)
+  } else {
+    edgepmat<-(pf-1)*(!edgepmat)
+    return(edgepmat+1)
+  }
+}
 simedgepmat<-function(BNmixt,pf=2,blacklist=FALSE,errRate=0){
   edgepmat<-1*Reduce('|',BNmixt$DAGs)
   if(errRate>0) {
@@ -77,6 +102,24 @@ getTopFeats<-function(MOFAobject,views,facts,ntop) {
   print(feats)
   return(feats)
 }
+getTopFeats2<-function(MOFAobject,views,facts,ntop) {
+  MOFAweights <- get_weights(
+    MOFAobject,
+    views = views,
+    factors = facts,
+    as.data.frame = FALSE    # if TRUE, it outputs a long dataframe format. If FALSE, it outputs a wide matrix format
+  )
+  MOFAweights<-lapply(MOFAweights, abs)
+  MOFAweights<-lapply(MOFAweights,rowSums)
+  allfeats<-c()
+  for(i in 1:length(MOFAweights)) {
+    allfeats<-c(allfeats,unlist(MOFAweights[[i]]))
+  }
+  feats<-names(sort(allfeats,decreasing=TRUE)[1:ntop])
+  print(feats)
+  return(feats)
+}
+
 is.error <- function(x) inherits(x, "try-error")
 topNodes<-function(mixttest,topn=100,plus=FALSE){
   sds<-apply(mixttest$data,2,sd)
@@ -123,7 +166,6 @@ mclustPCA<-function(datas,k,npca=k+2) {
 return(startmemb)
 }
 clustSubset2<-function(mixttest,nodesB,nodesC,commonDAG,k) {
-  nodesC<-topnodes
   newmixt<-mixttest
   newmixt$data<-list()
   newmixt$data[["M"]]<-mixttest$data[,nodesB]
@@ -145,5 +187,14 @@ makeOmicsObject<-function(mixttest,n,nbin){
   datanew[["M"]]<-mixttest$data[,nodesB]
   datanew[["T"]]<-mixttest$data[,nodesC]
   return(datanew)
+}
+selectFeatures<-function(mixttest,nodesB,nodesC){
+  newmixt<-mixttest
+  newmixt$data<-list()
+  newmixt$data[["M"]]<-mixttest$data[,nodesB]
+  newmixt$data[["T"]]<-mixttest$data[,nodesC]
+  newmixt$data<-cbind(newmixt$data[["M"]],newmixt$data[["T"]])
+  newmixt$info$n<-length(nodesC)
+  return(newmixt)
 }
 

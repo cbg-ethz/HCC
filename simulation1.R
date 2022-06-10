@@ -46,3 +46,20 @@ res<-simBNclust(nrep=2,
                    onlyother=benchmarkalgos,edgep=FALSE,savedata=FALSE,
                    path=path,base=base,recimlr=FALSE)
 
+#library(BiDAG)
+#library(iClusterPlus)
+#library(clue)
+#library(mclust)
+bnmixt<-genMixture(k=3, type="mixed",centersignal="medium",
+                   sigma0=0.3, ssvec=c(20,20,20), n=100, avpar=1, deltamu=20, lB=0.4, uB=1.5,
+                   shdpct=20, randomseed=100, eqval=0,
+                   mixedpar=list(nbin=20,avchildren=0.5,par1=0.1,par2=7), signalroots=TRUE)
+#dim(bnmixt$data)
+acciclust(bnmixt)
+accCIMLRco(bnmixt)
+accCIMLR(bnmixt)
+accmclust(bnmixt)
+acchclust(bnmixt)
+acckmeans(bnmixt)
+accSNF(bnmixt)
+

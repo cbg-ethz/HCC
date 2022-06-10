@@ -144,12 +144,73 @@ accMOFA<-function(BNmixt,abs=FALSE,accuracy=TRUE) {
     return(MOFAobject)
   }
 }
-clustaccuracy<-function(truememb,estmemb,k,ss,abs=FALSE) {
+clustaccuracy<-function(truememb,estmemb,k,ss,abs=FALSE,prec=FALSE) {
   if(abs) {
     return((checkmembership(k,truememb,estmemb)$ncorr)/ss)
   } else {
-    return(data.frame(ABS=(checkmembership(k,truememb,estmemb)$ncorr)/ss, ARI=adjustedRandIndex(truememb, estmemb)))
+    if(prec) {
+      return(data.frame(precision=precision_clusters(estmemb,truememb), ARI=adjustedRandIndex(truememb, estmemb)))
+    } else {
+      return(data.frame(ABS=(checkmembership(k,truememb,estmemb)$ncorr)/ss, ARI=adjustedRandIndex(truememb, estmemb)))
+    }
   }
+}
+precision_clusters<-function(clusters,true_clusters) {
+  cluster_labels<-unique(clusters)
+  n_clust<-length(cluster_labels)
+  N<-length(clusters)
+  
+  cluster_index<-lapply(cluster_labels,single_clusters,clusters)
+  cluster_bins<-lapply(cluster_index,make_bins,true_clusters)
+  
+  tot_pairs<-N*(N-1)/2
+  tot_pos<-sum(unlist(lapply(cluster_bins,total_pos_pairs)))
+  tot_neg<-total_neg_pairs(tot_pairs,tot_pos)
+  
+  TP<-sum(unlist(lapply(cluster_bins,pairs_TP)))
+  FP<-tot_pos-TP
+  FN<-pairs_FP(cluster_bins,cluster_labels)
+  TN<-tot_neg-FP
+  
+  Pr<-TP/(TP+FP)
+  Rec<-TP/(TP+FN)
+  F1<-2*(Pr*Rec)/(Pr+Rec)
+  return(c(Pr,Rec,F1))
+}
+single_clusters<-function(i,clusters) {
+  return(which(clusters==i))
+}
+make_bins<-function(index,true_clusters){
+  return(true_clusters[index])
+}
+total_pos_pairs<-function(cluster_bin){
+  return(choose(length(cluster_bin),2))
+}
+pairs_TP<-function(cluster_bin){
+  taby<-table(cluster_bin)
+  return(sum(sapply(taby[which(taby>1)],choose,2)))
+}
+pairs_FP<-function(cluster_bins,cluster_labels){
+  mm_matrix<-matrix(nrow=length(cluster_labels),
+                    ncol=length(cluster_bins))
+  for(i in 1:length(cluster_bins)) {
+    for(j in cluster_labels) {
+      mm_matrix[i,j]<-length(which(cluster_bins[[i]]==j))
+    }
+  }
+  
+  mm_tot<-0
+  n_row<-nrow(mm_matrix)
+  
+  for(i in 1:ncol(mm_matrix)) {
+    for(j in 1:(nrow(mm_matrix)-1)) {
+      mm_tot<-mm_tot+mm_matrix[j,i]*sum(mm_matrix[(j+1):n_row,i])
+    }
+  }
+  return(mm_tot)
+}
+total_neg_pairs<-function(tot_pairs,tot_pos) {
+  return(tot_pairs-tot_pos)
 }
 
 
