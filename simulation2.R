@@ -1,101 +1,145 @@
-use_condaenv("r-reticulate", required = TRUE)
-library(MOFA)
-library(MOFAdata)
-library(MultiAssayExperiment)
-library(CIMLR)
-library(SIMLR)
-library(mogsa)
-library(clue)
-library(BiDAG)
-library(gRbase)
-library(pcalg)
-library(mclust)
-library(iClusterPlus)
-library(bnclustOmics)
-#
-source("bnclustSimCode/R/generate.R")
-source("bnclustSimCode/R/otheralgos.R")
-source("bnclustSimCode/R/simclust.R")
-source("bnclustSimCode/R/helpfns.R")
-source("bnclustSimCode/R/clustfns.R")
-source("bnclustSimCode/R/comparemodels.R")
+#THIS SCRIPT CAN BE USED TO REPLICATE Figure 2D
+#This script can be run in a parallelized environment
 
-glob<-list()
-glob$res<-NULL
-glob$nint<-NULL
-glob$vnarMOFA<-vector()
-#glob$nvarmo<-vector() for testing moCluster
-ss<-20
-k<-3
-n<-1000
-nbin<-100
-args<-c(150,20,1,70,4) # c(150,30,1,70,6), c(150,10,1,70,2) 
+#!/usr/bin/env Rscript
+args = commandArgs(trailingOnly=TRUE)
+
+#path to save the result
 path<-""
-base<-"featsel1000"
-#run 50 runs for each value of args, 5 for reasonable time
-for(i in 1:5) {
-  
+base<-"featureSelection"
+
+
+#parameter rep replicate number
+#arguments are passed via a vector of characters args
+#args[1] number of continuous variables selected from 1000 in the full network
+#args[2] shadcpt SHD between  between networks in the mixture  as a percentage of edges in the fist network multiplied by 100
+#args[3] deltamu a percentage different conditional means between networks in the mixture multiplied by 100
+
+#example
+#args<-c("150","20","4")
+#rep<-1
+featureSelectionCore<-function(rep,args){
+
+  #restart R
+  #Then run the scripts, e.g. in R
+  library('reticulate')
+
+  # Set conda environment to use
+  use_condaenv("r-reticulate", required = TRUE)
+  library(MOFA)
+  library(MultiAssayExperiment)
+
+  library(CIMLR)
+  library(SIMLR)
+  library(clue)
+  library(BiDAG)
+  library(gRbase)
+  library(pcalg)
+  library(mclust)
+  library(iClusterPlus)
+  library(bnClustOmics)
+  #
+  source("simulations_code/R/generate.R")
+  source("simulations_code/R/otheralgos.R")
+  source("simulations_code/R/helpfns.R")
+  source("simulations_code/R/clustfns.R")
+  source("simulations_code/R/comparemodels.R")
+  source("simulations_code/R/simclust.R")
+
+  #source("/Users/polinasuter/Downloads/HCCsimcode/R/generate.R")
+  #source("/Users/polinasuter/Downloads/HCCsimcode/R/otheralgos.R")
+  #source("/Users/polinasuter/Downloads/HCCsimcode/R/simclust.R")
+  #source("/Users/polinasuter/Downloads/HCCsimcode/R/helpfns.R")
+  #source("/Users/polinasuter/Downloads/HCCsimcode/R/clustfns.R")
+  #source("/Users/polinasuter/Downloads/HCCsimcode/R/comparemodels.R")
+
+
+  ss<-20
+  k<-3
+  n<-1000
+  nbin<-100
+
   mofares<-FALSE
-  sseed<-100*i
+  sseed<-100*rep
   set.seed(sseed)
   mixttest<-genMixture(k=k,type="mixed",centersignal="medium",sigma0=0.3, eqval=0,
-                       ssvec=rep(ss,k),n=n,avpar=1,deltamu=as.numeric(args[5]),lB=0.5, uB=1.5,shdpct=as.numeric(args[2]),
-                       randomseed=sseed,mixedpar=list(nbin=nbin,avchildren=0.5,par1=as.numeric(args[3])/10,par2=as.numeric(args[4])/10, dist="b"))
-  
+                       ssvec=rep(ss,k),n=n,avpar=1,deltamu=as.numeric(args[3]),lB=0.5, uB=1.5,shdpct=as.numeric(args[2]),
+                       randomseed=sseed,mixedpar=list(nbin=nbin,avchildren=0.5,par1=0.01,par2=7, dist="b"))
+
   newmixt<-mixttest
   colnames(mixttest$data)<-paste("V",1:(n+nbin),sep="")
   rownames(mixttest$data)<-paste("S",1:(ss*k),sep="")
   nodesB<-paste("V",1:nbin,sep="")
   topnodes<-paste("V",topNodes(mixttest,as.numeric(args[1])),sep="")
-  
+
   res_local<-list()
-  nint_local<-list()
-  
-  res_local$kmeans<-acckmeans(mixttest,abs=FALSE,npca=5,PCA=TRUE)[[2]]
-  res_local$mclust<-accmclust(mixttest,abs=FALSE,npca=5,PCA=TRUE)[[2]]
-  res_local$hclust<-acchclust(mixttest,abs=FALSE,npca=5,PCA=TRUE)[[2]]
-  
+
+  res_local$kmeans<-acckmeans(mixttest,abs=FALSE,npca=5,PCA=TRUE)
+  res_local$mclust<-accmclust(mixttest,abs=FALSE,npca=5,PCA=TRUE)
+  res_local$hclust<-acchclust(mixttest,abs=FALSE,npca=5,PCA=TRUE)
+
   aMOFA<-try(accMOFA(mixttest,abs=FALSE))
   if(is.error(aMOFA)) {
     res_local$MOFA<-(-1)
   } else {
-    res_local$MOFA<-aMOFA[[2]]
+    res_local$MOFA<-aMOFA
     mofares<-TRUE
   }
-  res_local$iclust<-acciclust(mixttest,abs=FALSE)[[2]]
-  res_local$CIMLR<-accCIMLR(mixttest,abs=FALSE)[[2]]
-  res_local$CIMLRco<-accCIMLRco(mixttest,abs=FALSE)[[2]]
-  
+  res_local$iclust<-acciclust(mixttest,abs=FALSE)
+  res_local$CIMLR<-accCIMLR(mixttest,abs=FALSE)
+  res_local$CIMLRco<-accCIMLRco(mixttest,abs=FALSE)
+
   commonDAG<-1*Reduce('|',mixttest$DAGs)
   colnames(commonDAG)<-rownames(commonDAG)<-paste("V",1:(n+nbin),sep="")
   colnames(mixttest$data)<-colnames(commonDAG)
-  
-  bnfit<-clustSubset2(mixttest,nodesB,topnodes,commonDAG,k)
-  nint_local$top<-bnfit[[1]]
-  res_local$bn_top<-bnfit[[2]]
-  
+
+  #MOFA
   MOFAobject<-try(accMOFA(mixttest,abs=FALSE,accuracy=FALSE))
   if(is.error(MOFAobject)) {
     MOFAtop<-NULL
-    glob$nvarMOFA[i]<-0
-    nint_local$MOFA<-0
-    res_local$bn_MOFA<-(-1)
+    res_local$mofan<-0
   } else {
     MOFAtop<-getTopFeats(MOFAobject,"T","all",as.numeric(args[1]))
-    glob$nvarMOFA[i]<-length(MOFAtop)
-    bnfit<-clustSubset2(mixttest,nodesB,MOFAtop,commonDAG,k)
-    nint_local$MOFA<-bnfit[[1]]
-    res_local$bn_MOFA<-bnfit[[2]]
+    res_local$mofan<-length(MOFAtop)
   }
-  
-  #bnclustOmics results using hybridNodes
-  hybnodes<-hybridNodes(mixttest,nodesMOFA=MOFAtop, topn=as.numeric(args[1]),plus=FALSE)
+
+  #hybridNodes
+  hybnodes<-hybridNodes(mixttest,nodesMOFA=MOFAtop, topn=as.numeric(args[1]),plus=FALSE)#
   bnfit<-clustSubset2(mixttest,nodesB,hybnodes,commonDAG,k)
-  nint_local$hyb<-bnfit[[1]]
-  res_local$bn_hyb<-bnfit[[2]]
-  
-  glob$res<-rbind(glob$res,res_local)
-  glob$nint<-rbind(glob$nint,nint_local)
-  saveRDS(glob,file=paste(path,base,".rds",sep=""))
-  
+  res_local$bn_hyb<-bnfit
+
+  #new code for selected features for other algorithms
+  mixttest_fs<-selectFeatures(mixttest,nodesB,hybnodes)
+  res_local$kmeans_fs<-acckmeans(mixttest_fs,abs=FALSE,PCA=TRUE)
+  res_local$mclust_fs<-accmclust(mixttest_fs,abs=FALSE,PCA=TRUE)
+  res_local$hclust_fs<-acchclust(mixttest_fs,abs=FALSE,PCA=TRUE)
+
+  aMOFA<-try(accMOFA(mixttest_fs,abs=FALSE))
+  if(is.error(aMOFA)) {
+    res_local$MOFA_fs<-(-1)
+  } else {
+    res_local$MOFA_fs<-aMOFA
+    mofares<-TRUE
+  }
+  res_local$iclust_fs<-acciclust(mixttest_fs,abs=FALSE)
+  res_local$CIMLR_fs<-accCIMLR(mixttest_fs,abs=FALSE)
+  res_local$CIMLRco_fs<-accCIMLRco(mixttest_fs,abs=FALSE)
+  res_local$SHD<-as.numeric(args[2])
+  res_local$mu<-as.numeric(args[5])
+  res_local$rep<-rep
+  res_local$nf<-as.numeric(args[1])
+
+  return(res_local)
 }
+
+
+#this code can be used to run 50 replicates of simulations in parallel
+library(parallel)
+rep<-c(1:50)
+cl <- makeCluster(51)
+outputClApply <- parallel::clusterApply(cl, rep, featureSelectionCore,args)
+stopCluster(cl)
+res<-outputClApply
+
+#ADD LINE TO SAVE THE RESULT!
+saveRDS(res,paste(path,base,args[1],"SHD",args[2],"MU",args[3],".rds",sep=""))

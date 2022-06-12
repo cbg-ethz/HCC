@@ -1,23 +1,29 @@
+######################################################################
+#Constructing graphical prior (penalization matrix) for bnClustOmics #
+#using the interactions list from STRING database                    #
+######################################################################
+
+
 #loading the object of class bnInfo
 #for construction instructions see HCCclustering.R
-namesHCC<-readRDS("/Users/polinasuter/Downloads/HCC/submit/HCCinputs/HCCinfo.rds")
+namesHCC<-readRDS("HCCinputs/HCCinfo.rds")
 
 #we will need the saved penalization matrix to compare it to the
 #constructed penalization matrix
-HCCpm<-readRDS("/Users/polinasuter/Downloads/HCC/submit/HCCinputs/HCCpm.rds")
+HCCpm<-readRDS("HCCinputs/HCCpm.rds")
 
 #loading the list of interactions saved from the STRING web-site
 #https://string-db.org/
-stringintlist<-read.csv2("/Users/polinasuter/Downloads/HCC/new/string/HCCint3.tsv",sep="\t")
+stringintlist<-read.csv2("DBdata/HCCint3.tsv",sep="\t")
 
 #loading the the mapping between STRING IDs and IDs used in the analysis
 #such mapping can be downloaded from the STRING web-site
 #https://string-db.org/
-stringmapping<-read.csv2("/Users/polinasuter/Downloads/HCC/new/string/HCCmap3.tsv",sep="\t")
+stringmapping<-read.csv2("DBdata/HCCmap3.tsv",sep="\t")
 
 #interactions from BIOGRID human database
 #can be downloaded from the web-site
-biogridhuman<-read.delim("/Users/polinasuter/Downloads/biogrid_human.txt", header = TRUE, sep = "\t")
+biogridhuman<-read.delim("DBdata/biogrid_human.txt", header = TRUE, sep = "\t")
 
 
 stringchange<-stringmapping[(which(stringmapping$queryItem!=stringmapping$preferredName)),c(1:4)]
@@ -116,14 +122,13 @@ for(i in 1:nrow(stringintlist)){
   }
 }
 
+#plot the scores of interactions from STRING that are also present in BIOGRID
+#to interactions from STRING that are absent in BIOGRID
 boxplot(stringintlist$score[which(stringintlist$biogrid==TRUE)],
         stringintlist$score[which(stringintlist$biogrid==FALSE)],
         names=c("in BIOGRID", "absent"),ylab=c("STRING score"))
 
-length(which(stringintlist$biogrid==TRUE))/nrow(stringintlist)
-median(stringintlist$score[which(stringintlist$biogrid==TRUE)])
-median(stringintlist$score[which(stringintlist$biogrid==FALSE)])
 
 
-stringint[which(stringint$biogrid==FALSE & stringint$score>0.9)[1:10],]
+
 

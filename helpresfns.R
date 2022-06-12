@@ -22,7 +22,8 @@ plot1nodecircle<-function(localint, node, y1=20, thresh=0.3,rmult=7,stringcheck=
   on.exit(par(old.par))
   nint<-nrow(localint)
   bidir<-rep(0,nint)
-
+  typecols<-c("#fbb4ae", "#fed9a6", "#ffffcc", "#b3cde3", "#decbe4")
+  names(typecols)<-c("M","CN","T","P","PP")
   nodeint<-localint[which(localint$from==node | localint$to==node)[1],]
   if(nodeint$from==node) nodetype=nodeint$type1 else nodetype=nodeint$type2
 
@@ -102,8 +103,7 @@ plot1nodecircle<-function(localint, node, y1=20, thresh=0.3,rmult=7,stringcheck=
   }
   par(mar=rep(1,4))
 
-  typecols<-c("#fbb4ae", "#fed9a6", "#ffffcc", "#b3cde3", "#decbe4")
-  names(typecols)<-c("M","CN","T","P","PP")
+
   nint<-nrow(localint)
   deltar<-r*0.2
   x<-17.5
@@ -189,6 +189,12 @@ FSbyVarmy<-function(dataf,value) {
   myvars <- apply(dataf,1, var,na.rm=TRUE)
   myvars <- sort(myvars,decreasing=TRUE)
   myvars <- myvars[1:value]
+  return(dataf[names(myvars),])
+}
+
+FSbyVar<-function(dataf,stdev) {
+  myvars <- apply(dataf,1, sd,na.rm=TRUE)
+  myvars <- myvars[which(myvars>stdev)]
   return(dataf[names(myvars),])
 }
 

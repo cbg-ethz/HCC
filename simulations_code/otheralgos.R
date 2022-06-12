@@ -40,7 +40,7 @@ accCIMLRco<-function(BNmixt,abs=FALSE) {
   cimlrfit<-CIMLR::CIMLR(datalist,c=k,cores.ratio = 0)
   return(clustaccuracy(BNmixt$membership,cimlrfit$y$cluster,k,ss,abs=abs))
 }
-accmclust<-function(BNmixt,PCA=FALSE,npca=5,abs=FALSE) {
+accmclust<-function(BNmixt,PCA=FALSE,npca=3,abs=FALSE) {
   k<-length(BNmixt$DAGs)
   ss<-nrow(BNmixt$data)
   if(!PCA) {
@@ -54,7 +54,7 @@ accmclust<-function(BNmixt,PCA=FALSE,npca=5,abs=FALSE) {
     return(clustaccuracy(BNmixt$membership,mclustfit$classification,k,ss,abs=abs))
   }
 }
-acchclust<-function(BNmixt,abs=FALSE,npca=5,PCA=FALSE) {
+acchclust<-function(BNmixt,abs=FALSE,npca=3,PCA=FALSE) {
   k<-length(BNmixt$DAGs)
   ss<-nrow(BNmixt$data)
   if(!PCA) {
@@ -72,7 +72,7 @@ acchclust<-function(BNmixt,abs=FALSE,npca=5,PCA=FALSE) {
   }
   return(clustaccuracy(BNmixt$membership,cut_avg,k,ss,abs=abs))
 }
-acckmeans<-function(BNmixt,abs=FALSE,npca=5,PCA=FALSE) {
+acckmeans<-function(BNmixt,abs=FALSE,npca=3,PCA=FALSE) {
   k<-length(BNmixt$DAGs)
   ss<-nrow(BNmixt$data)
   if(!PCA) {
@@ -134,7 +134,8 @@ accMOFA<-function(BNmixt,abs=FALSE,accuracy=TRUE) {
     TrainOptions = TrainOptions
   )
 
-  MOFAobject <- runMOFA(MOFAobject)
+  rand<-sample.int(1000000,1)
+  MOFAobject <- runMOFA(MOFAobject,outfile=paste("mofamod/model",rand,".hdf5",sep=""))
   if(accuracy) {
   clusters <- clusterSamples(MOFAobject, k=k, factors=1:MOFAobject@Dimensions$K)
   #print(clustaccuracy(BNmixt$membership,iclustfit$clusters,k,ss,abs=TRUE))
@@ -144,19 +145,59 @@ accMOFA<-function(BNmixt,abs=FALSE,accuracy=TRUE) {
     return(MOFAobject)
   }
 }
-clustaccuracy<-function(truememb,estmemb,k,ss,abs=FALSE,prec=FALSE) {
+accMOFA2<-function(BNmixt,abs=FALSE,accuracy=TRUE) {
+  k<-length(BNmixt$DAGs)
+  dd<-dividedata(BNmixt)
+  ss<-nrow(BNmixt$data)
+  rownames(dd$bin)<-rownames(dd$cont)<-paste("S",1:ss,sep="")
+  var0<-which(apply(dd$bin,2,sd)==0)
+  if(length(var0>0)) dd$bin<-dd$bin[,-var0] else dd$bin<-dd$bin
+
+  HCCDI<-list()
+  HCCDI[["M"]]<-t(dd$bin)
+  HCCDI[["T"]]<-t(dd$cont)
+  model <- runMOFA2(HCCDI)
+  clusters <- cluster_samples(model, k=k, factors="all")
+  if(accuracy) {
+    return(clustaccuracy(BNmixt$membership,clusters$cluster,k,ss,abs=abs))
+  } else {
+    return(model)
+  }
+
+}
+runMOFA2<-function(mofadata,seed=200,minvar=0.01,nfac=6) {
+  MOFAobject <- create_mofa(mofadata)
+  data_opts <- get_default_data_options(MOFAobject)
+  model_opts <- get_default_model_options(MOFAobject)
+  model_opts$num_factors<-nfac
+  train_opts <- get_default_training_options(MOFAobject)
+  train_opts$drop_factor_threshold<-minvar
+  MOFAobject <- prepare_mofa(
+    object = MOFAobject,
+    data_options = data_opts,
+    model_options = model_opts,
+    training_options = train_opts
+  )
+  outfile = file.path("/Users/polinasuter/Downloads/MOFAresults/","model1.hdf5")
+  model <- run_mofa(MOFAobject, outfile)
+  return(model)
+}
+clustaccuracy<-function(truememb,estmemb,k,ss,abs=FALSE,prec=TRUE) {
   if(abs) {
     return((checkmembership(k,truememb,estmemb)$ncorr)/ss)
   } else {
     if(prec) {
-      return(data.frame(precision=precision_clusters(estmemb,truememb), ARI=adjustedRandIndex(truememb, estmemb)))
+      prec<-precision_clusters(estmemb,truememb)
+      return(data.frame(precision=prec[1],recall=prec[2],F1=prec[3], ARI=adjustedRandIndex(truememb, estmemb)))
     } else {
       return(data.frame(ABS=(checkmembership(k,truememb,estmemb)$ncorr)/ss, ARI=adjustedRandIndex(truememb, estmemb)))
     }
   }
 }
 precision_clusters<-function(clusters,true_clusters) {
+  clusters<-as.numeric(factor(clusters))
   cluster_labels<-unique(clusters)
+  
   n_clust<-length(cluster_labels)
   N<-length(clusters)
   
@@ -188,7 +229,11 @@ total_pos_pairs<-function(cluster_bin){
 }
 pairs_TP<-function(cluster_bin){
   taby<-table(cluster_bin)
-  return(sum(sapply(taby[which(taby>1)],choose,2)))
+  if(length(taby[which(taby>1)])>0) {
+    return(sum(sapply(taby[which(taby>1)],choose,2)))
+  } else{
+    return(0)
+  }
 }
 pairs_FP<-function(cluster_bins,cluster_labels){
   mm_matrix<-matrix(nrow=length(cluster_labels),
@@ -203,17 +248,17 @@ pairs_FP<-function(cluster_bins,cluster_labels){
   n_row<-nrow(mm_matrix)
   
   for(i in 1:ncol(mm_matrix)) {
+   if(nrow(mm_matrix)>1) {
     for(j in 1:(nrow(mm_matrix)-1)) {
       mm_tot<-mm_tot+mm_matrix[j,i]*sum(mm_matrix[(j+1):n_row,i])
     }
+   }
   }
   return(mm_tot)
 }
 total_neg_pairs<-function(tot_pairs,tot_pos) {
   return(tot_pairs-tot_pos)
 }
-
-
 
 
 

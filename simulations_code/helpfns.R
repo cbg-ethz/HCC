@@ -165,7 +165,13 @@ mclustPCA<-function(datas,k,npca=k+2) {
 
 return(startmemb)
 }
-clustSubset2<-function(mixttest,nodesB,nodesC,commonDAG,k) {
+bnclustmodelscore<-function(bnres,score="AIC",ss=100, nbin=0) {
+  likel<-bnres$likel[length(bnres$likel)]
+  npar<-(2*ncol(bnres$DAGs[[1]])*length(bnres$DAGs)-nbin)+sum(unlist(lapply(bnres$DAGs,sum)))
+  if(score=="AIC") return(2*npar-2*likel) else if(score=="BIC") return(log(ss)*npar-2*likel) else
+    if(score=="ll") return(likel)
+}
+clustSubset2<-function(mixttest,nodesB,nodesC,commonDAG,k,chixi=0.5) {
   newmixt<-mixttest
   newmixt$data<-list()
   newmixt$data[["M"]]<-mixttest$data[,nodesB]
@@ -173,9 +179,9 @@ clustSubset2<-function(mixttest,nodesB,nodesC,commonDAG,k) {
   nint<-sum(commonDAG[c(nodesB,nodesC),c(nodesB,nodesC)])
   newmixt$info$n<-length(nodesC)
   omicsobj<-bnInfo(newmixt$data,types=c("b","c"),omics=c("M","T"))
-  bnfit<-bnclustOmics::bnclustOmics(newmixt$data,omicsobj, blacklist=NULL, edgepmat=NULL,kclust=k,
-                                    maxEM=4,startpoint = "mclustPCA",baseprob=0.4,plus1it=4,epmatrix=FALSE)
-  acc<-clustaccuracy(newmixt$membership,bnfit$memb,k=k,ss=nrow(newmixt$data[[1]]),abs=FALSE)$ARI
+  bnfit<-bnClustOmics::bnclustOmics(newmixt$data,omicsobj, blacklist=NULL, edgepmat=NULL,kclust=k, chixi=chixi,
+                                    maxEM=4,startpoint = "mclustPCA",baseprob=3/(k+2),plus1it=4,epmatrix=FALSE)
+  acc<-clustaccuracy(newmixt$membership,bnfit$memb,k=k,ss=nrow(newmixt$data[[1]]),abs=FALSE)
   return(list(nint,acc))
 }
 makeOmicsObject<-function(mixttest,n,nbin){
@@ -196,5 +202,24 @@ selectFeatures<-function(mixttest,nodesB,nodesC){
   newmixt$data<-cbind(newmixt$data[["M"]],newmixt$data[["T"]])
   newmixt$info$n<-length(nodesC)
   return(newmixt)
+}
+
+#source: https://github.com/CNRGH/crimmix/blob/master/R/extractPos.R
+#DOI: 10.1093/bib/bbz138, Pierre Jean M. et al.
+extract_Moa <- function(fit){
+  K <- fit@data %>% length
+  a <- fit@loading
+  selectVars_1 <- which(a %>% rowSums !=0) %>% names
+  selectVars <- lapply(1:K, function (kk){
+    return(sub("_data_.", "",selectVars_1))
+  })
+  return(selectVars)
+}
+#source: https://github.com/CNRGH/crimmix/blob/master/R/extractPos.R
+#DOI: 10.1093/bib/bbz138, Pierre Jean M. et al.
+extract_SGCCA <- function(fit){
+  a <- fit$a
+  selectVars <- lapply(a, function(aa) which(rowSums(aa) != 0) %>% names)
+  return(selectVars)
 }
 

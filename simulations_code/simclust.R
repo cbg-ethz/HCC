@@ -1,8 +1,8 @@
 #make sure that seed fixes structure and data
 simBNclust<-function(nrep,type, n=50, k=3, avpar=1, ssvec=rep(100,k), centersignal="strong",
                      sigma0=0.3, deltamu=20,lB=0.5, uB=1.5, shdpct=20, eqval=0,
-                     randomseed=100,mixedpar=list(nbin,avchildren,freqmin=0.1,freqmax=0.5),
-                     algorithm=c("mcmcMAP","mcmcsample","ges"),hardlimit=10,maxEM=6,plus1it=3,p=0.5,
+                     randomseed=100,mixedpar=list(nbin,avchildren,par1=0.1,par2=7),
+                     algorithm=c("bnclust","allother"),hardlimit=11,maxEM=6,plus1it=4,p=0.5,
                      startpoint=c("random","mclust","mclustPCA"),ROC=TRUE,addalgos=TRUE,basename=NULL,path=NULL,
                      onlyother=FALSE,edgep=FALSE,savedata=FALSE,recimlr=FALSE,errRate=0) {
   res<-list()
@@ -38,16 +38,10 @@ simBNclust<-function(nrep,type, n=50, k=3, avpar=1, ssvec=rep(100,k), centersign
     set.seed(sseed)
     databn<-makeOmicsObject(bnmixt,n,mixedpar$nbin)
     omicsobj<-bnInfo(databn,types=c("b","c"),omics=c("M","T"))
-    if(algorithm=="mcmcMAP") {
-      bnres<-bnclustOmics::bnclustOmics(databn,omicsobj, blacklist=NULL, edgepmat=edgepmat,kclust=k,
-                                        maxEM=maxEM,startpoint = startpoint,baseprob=3/(k+2),plus1it=plus1it,epmatrix=ROC)
-      # bnres<-bnclust(datafull=bnmixt$data,kclust=k,compare=TRUE,truememb=bnmixt$membership, edgepmat = edgepmat,
-      #                 MAP=TRUE,plus1it=4, bgnodes=1:bnmixt$nbin,returnep=ROC,maxEM=maxEM,startmemb=startmemb,type=type,nbin=bnmixt$nbin)
-    } else if (algorithm=="mcmcsample") {
-      # bnres<-bnclust(bnmixt$data,kclust=k,compare=TRUE,truememb=bnmixt$membership,MAP=FALSE,p=p, edgepmat = edgepmat,
-      #                plus1it=3, bgnodes=1:bnmixt$nbin,maxEM=maxEM,startmemb=startmemb,type=type,nbin=bnmixt$nbin)
-    } else {
-      #here comes learning with GES
+    if(k==3) baseprob<-0.4 else baseprob<-3/(k+2)
+    if(algorithm=="bnclust") {
+      bnres<-bnClustOmics::bnclustOmics(databn,omicsobj, blacklist=NULL, edgepmat=edgepmat,kclust=k, hardlim=hardlimit,chixi=0.5,
+                                        maxEM=maxEM,startpoint = startpoint,baseprob=baseprob,plus1it=plus1it,epmatrix=ROC)
     }
 
     relab<-checkmembership(k,bnmixt$membership,bnres$memb)$relabel
@@ -58,7 +52,7 @@ simBNclust<-function(nrep,type, n=50, k=3, avpar=1, ssvec=rep(100,k), centersign
       bnres$ep<-relabDAGs(bnres$ep,relab)
     }
 
-    if(algorithm=="mcmcMAP") res$ROC<-rbind(res$ROC,compareMixt(bnres,bnmixt,dag="MAP",rep=i,seed=sseed))
+    if(algorithm=="bnclust") res$ROC<-rbind(res$ROC,compareMixt(bnres,bnmixt,dag="MAP",rep=i,seed=sseed))
     else res$ROC<-rbind(res$ROC,compareMixt(bnres,bnmixt,dag="cons",rep=i,seed=sseed))
     #get network comparisons
     if(ROC) {
@@ -69,29 +63,24 @@ simBNclust<-function(nrep,type, n=50, k=3, avpar=1, ssvec=rep(100,k), centersign
     #acc<-bnres$corrvec[length(bnres$corrvec)]/sum(ssvec)
     dflocal<-rbind(dflocal,data.frame(clustaccuracy(bnmixt$membership,bnres$memb,k,ss=nrow(bnmixt$data)),algorithm=algorithm, metainfo))
     }
-    if(addalgos) {
+    if(algorithm!="bnclust") {
       print("mclust")
-      dflocal<-rbind(dflocal,data.frame(accmclust(bnmixt,PCA=TRUE),algorithm="mclustPCA", metainfo))
+      dflocal<-rbind(dflocal,data.frame(accmclust(bnmixt,PCA=TRUE, npca=k+2),algorithm="mclustPCA", metainfo))
       print("hclust")
-      dflocal<-rbind(dflocal,data.frame(acchclust(bnmixt,PCA=TRUE),algorithm="hclustPCA", metainfo))
+      dflocal<-rbind(dflocal,data.frame(acchclust(bnmixt,PCA=TRUE, npca=k+2),algorithm="hclustPCA", metainfo))
       print("kmeans")
-      dflocal<-rbind(dflocal,data.frame(acckmeans(bnmixt,PCA=TRUE),algorithm="kmeansPCA", metainfo))
+      dflocal<-rbind(dflocal,data.frame(acckmeans(bnmixt,PCA=TRUE, npca=k+2),algorithm="kmeansPCA", metainfo))
       #print("iclust")
       if((sum(ssvec)/k)<30) dflocal<-rbind(dflocal,data.frame(acciclust(bnmixt),algorithm="iclust", metainfo))
       dflocal<-rbind(dflocal,data.frame(accMOFA(bnmixt),algorithm="MOFA", metainfo))
       dflocal<-rbind(dflocal,data.frame(accCIMLRco(bnmixt),algorithm="CIMLRco", metainfo))
       dflocal<-rbind(dflocal,data.frame(accCIMLR(bnmixt),algorithm="CIMLR", metainfo))
-    } else if (recimlr) {
-	    dflocal<-rbind(dflocal,data.frame(accCIMLR(bnmixt),algorithm="CIMLR", metainfo))
-	    dflocal<-rbind(dflocal,data.frame(accCIMLRco(bnmixt),algorithm="CIMLRco", metainfo))
     }
     res$accuracy<-rbind(res$accuracy,dflocal)
     if(!is.null(basename) & !is.null(path)) saveRDS(res,paste(path,basename,".rds",sep=""))
     }
 
   }
-
-
   return(res)
 }
 

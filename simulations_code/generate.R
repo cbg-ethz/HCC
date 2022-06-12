@@ -187,6 +187,7 @@ genDAG<-function(d, n, lB=0.1, uB=1, wmpct=0, wmmin=1,wmmax=3, shdpct=0, wm=NULL
   res$dag<-dag
   res$wm<-wm
   return(res)
+
 }
 genData<-function(dag, wm, ss, meanpct=0,uneqnodes=c("roots","random"),shiftmin=1,shiftmax=2,eqval=0, meaninit=NULL,
                   sigma=1, sigmasd=0, sigmas=NULL, type="cont") {
@@ -300,7 +301,7 @@ genBinempty<-function(nbin, ss, par1=0.1, par2=0.5, dist="b") {
   if(dist=="u") freqs<-runif(nbin, min=par1, max=par2) else {
     freqs<-vector()
     freqs[1]<-rbeta(1,0.5,1)
-    freqs[2:nbin]<-rbeta(nbin-1,par1,par2)
+    freqs[2:nbin]<-rbeta(nbin-1,par1,par2)#nbin-1
   }
   datas<-matrix(0,ncol=nbin,nrow=ss)
   for(i in 1:nbin) {
