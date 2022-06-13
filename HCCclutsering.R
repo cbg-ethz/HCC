@@ -36,15 +36,6 @@ bnres<-bnclustOmics(HCCdata,namesHCC,HCCbl,HCCpm,epmatrix = TRUE,
 
 #load result, same as above
 bnres<-readRDS("HCCresults/res_main.rds")
-bnresn<-readRDS("/Users/polinasuter/Downloads/jun223TT.rds")
-
-
-compareDAGs(bnres$DAGs[[3]],bnresn$DAGs[[3]])
-
-bnres$likel
-bnresn$likel
-
-
 
 #other k
 #it is important that epmatrix=FALSE for below runs
