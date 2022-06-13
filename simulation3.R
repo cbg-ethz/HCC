@@ -90,12 +90,8 @@ simBNclustcore<-function(rep,n=100,
         bnres$ep<-relabDAGs(bnres$ep,relab)
       }
 
-      if(algorithm=="bnclust") res$ROC<-rbind(res$ROC,compareMixt(bnres,bnmixt,dag="MAP",rep=rep,seed=sseed)) else
-        res$ROC<-rbind(res$ROC,compareMixt(bnres,bnmixt,dag="cons",rep=rep,seed=sseed))
-      #get network comparisons
-      if(ROC) {
-        res$ROC<-rbind(res$ROC,compareMixt(bnres,bnmixt,dag="p",p=c(0.3,0.5,0.7,0.9,0.95,0.99)))
-      }
+      res$ROC<-rbind(res$ROC,compareMixt(bnres,bnmixt,dag="MAP",rep=rep,seed=sseed))
+      res$ROC<-rbind(res$ROC,compareMixt(bnres,bnmixt,dag="p",p=c(0.3,0.5,0.7,0.9,0.95,0.99)))
 
       dflocal<-rbind(dflocal,data.frame(clustaccuracy(bnmixt$membership,bnres$memb,k,ss=nrow(bnmixt$data)),algorithm=algorithm, metainfo))
     }
