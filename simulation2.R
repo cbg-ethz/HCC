@@ -16,7 +16,13 @@ base<-"featureSelection"
 #args[3] deltamu a percentage different conditional means between networks in the mixture multiplied by 100
 
 #example
+#for a quick test, very few features selected (30) -> runs faster
+#args<-c("30","30","10")
+#options used in the manuscript
+#args<-c("150","10","0")
+#args<-c("150","20","3")
 #args<-c("150","20","4")
+#args<-c("150","30","6")
 #rep<-1
 featureSelectionCore<-function(rep,args){
 
@@ -39,20 +45,12 @@ featureSelectionCore<-function(rep,args){
   library(iClusterPlus)
   library(bnClustOmics)
   #
-  source("simulations_code/R/generate.R")
-  source("simulations_code/R/otheralgos.R")
-  source("simulations_code/R/helpfns.R")
-  source("simulations_code/R/clustfns.R")
-  source("simulations_code/R/comparemodels.R")
-  source("simulations_code/R/simclust.R")
-
-  #source("/Users/polinasuter/Downloads/HCCsimcode/R/generate.R")
-  #source("/Users/polinasuter/Downloads/HCCsimcode/R/otheralgos.R")
-  #source("/Users/polinasuter/Downloads/HCCsimcode/R/simclust.R")
-  #source("/Users/polinasuter/Downloads/HCCsimcode/R/helpfns.R")
-  #source("/Users/polinasuter/Downloads/HCCsimcode/R/clustfns.R")
-  #source("/Users/polinasuter/Downloads/HCCsimcode/R/comparemodels.R")
-
+  source("simulations_code/generate.R")
+  source("simulations_code/otheralgos.R")
+  source("simulations_code/helpfns.R")
+  source("simulations_code/clustfns.R")
+  source("simulations_code/comparemodels.R")
+  source("simulations_code/simclust.R")
 
   ss<-20
   k<-3
@@ -80,7 +78,7 @@ featureSelectionCore<-function(rep,args){
 
   aMOFA<-try(accMOFA(mixttest,abs=FALSE))
   if(is.error(aMOFA)) {
-    res_local$MOFA<-(-1)
+    res_local$MOFA<-data.frame(precision=0,recall=0,F1=0,ARI=0)
   } else {
     res_local$MOFA<-aMOFA
     mofares<-TRUE
@@ -99,7 +97,7 @@ featureSelectionCore<-function(rep,args){
     MOFAtop<-NULL
     res_local$mofan<-0
   } else {
-    MOFAtop<-getTopFeats(MOFAobject,"T","all",as.numeric(args[1]))
+    MOFAtop<-getTopFeats2(MOFAobject,"T","all",as.numeric(args[1]))
     res_local$mofan<-length(MOFAtop)
   }
 
@@ -116,7 +114,7 @@ featureSelectionCore<-function(rep,args){
 
   aMOFA<-try(accMOFA(mixttest_fs,abs=FALSE))
   if(is.error(aMOFA)) {
-    res_local$MOFA_fs<-(-1)
+    res_local$MOFA_fs<-data.frame(precision=0,recall=0,F1=0,ARI=0)
   } else {
     res_local$MOFA_fs<-aMOFA
     mofares<-TRUE
@@ -125,7 +123,7 @@ featureSelectionCore<-function(rep,args){
   res_local$CIMLR_fs<-accCIMLR(mixttest_fs,abs=FALSE)
   res_local$CIMLRco_fs<-accCIMLRco(mixttest_fs,abs=FALSE)
   res_local$SHD<-as.numeric(args[2])
-  res_local$mu<-as.numeric(args[5])
+  res_local$mu<-as.numeric(args[3])
   res_local$rep<-rep
   res_local$nf<-as.numeric(args[1])
 
@@ -133,10 +131,11 @@ featureSelectionCore<-function(rep,args){
 }
 
 
-#this code can be used to run 50 replicates of simulations in parallel
+#this code can be used to run multiple replicates of simulations in parallel
 library(parallel)
-rep<-c(1:50)
-cl <- makeCluster(51)
+nrep<-2 #in the manuscript nrep=50
+rep<-c(1:nrep) #number or replicates
+cl <- makeCluster(nrep+1) #number of cores
 outputClApply <- parallel::clusterApply(cl, rep, featureSelectionCore,args)
 stopCluster(cl)
 res<-outputClApply

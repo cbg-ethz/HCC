@@ -4,9 +4,11 @@
 ##########################################
 #If simulations are run via command line #
 ##########################################
+#two arguments
 #first argument is the number replicates
 #second argument is the number of nodes in one time slice of a DBN
 args = commandArgs(trailingOnly=TRUE)
+#example: args<-c("10","10")
 #when run via command line the first argument is FPrate*100, e.g.
 #is the proportion of added false positive edges
 #(as a percentage of all true positives) is 200%
@@ -42,18 +44,17 @@ simBNclustcore<-function(rep,n=100,
   library(bnClustOmics)
   library(clue)
   #
-  source("simulations_code/R/generate.R")
-  source("simulations_code/R/otheralgos.R")
-  source("simulations_code/R/helpfns.R")
-  source("simulations_code/R/clustfns.R")
-  source("simulations_code/R/comparemodels.R")
+  source("simulations_code/generate.R")
+  source("simulations_code/otheralgos.R")
+  source("simulations_code/helpfns.R")
+  source("simulations_code/clustfns.R")
+  source("simulations_code/comparemodels.R")
   #
   mixedpar=list(nbin=20,avchildren=0.5,par1=0.1,par2=7)
   if(algorithm!="mcmcMAP") onlyother<-FALSE else onlyother<-TRUE
   res<-list()
   res$ROC<-NULL
   res$accuracy<-NULL
-  if(!is.null(basename) & !is.null(path)) saveRDS(res,paste(path,basename,".rds",sep=""))
   sseed<-100+rep
   set.seed(sseed)
   dflocal<-NULL
@@ -76,7 +77,7 @@ simBNclustcore<-function(rep,n=100,
       set.seed(sseed)
       databn<-makeOmicsObject(bnmixt,n,mixedpar$nbin)
       omicsobj<-bnInfo(databn,types=c("b","c"),omics=c("M","T"))
-      if(algorithm=="mcmcMAP") {
+      if(algorithm=="bnclust") {
         bnres<-bnClustOmics::bnclustOmics(databn,omicsobj, blacklist=NULL, edgepmat=edgepmat,kclust=k,
                                           maxEM=10,startpoint = "mclustPCA",baseprob=3/(k+2),plus1it=4,epmatrix=TRUE)
 
@@ -100,17 +101,17 @@ simBNclustcore<-function(rep,n=100,
     }
 
     res$accuracy<-rbind(res$accuracy,dflocal)
-    if(!is.null(basename) & !is.null(path)) saveRDS(res,paste(path,basename,".rds",sep=""))
   }
   return(res)
 }
 
 #
 
-#this code can be used to run 50 replicates of simulations in parallel
+#this code can be used to run multiple replicates of simulations in parallel
 library(parallel)
-rep<-c(1:50)
-cl <- makeCluster(51)
+nrep<-2 #numbr of replicates, in the manuscript nrep=50
+rep<-c(1:nrep)
+cl <- makeCluster(nrep+1)
 outputClApply <- parallel::clusterApply(cl, rep, simBNclustcore,
                                         n=100,
                                         k=4,

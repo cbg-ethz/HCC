@@ -36,6 +36,15 @@ bnres<-bnclustOmics(HCCdata,namesHCC,HCCbl,HCCpm,epmatrix = TRUE,
 
 #load result, same as above
 bnres<-readRDS("HCCresults/res_main.rds")
+bnresn<-readRDS("/Users/polinasuter/Downloads/jun223TT.rds")
+
+
+compareDAGs(bnres$DAGs[[3]],bnresn$DAGs[[3]])
+
+bnres$likel
+bnresn$likel
+
+
 
 #other k
 #it is important that epmatrix=FALSE for below runs
@@ -78,7 +87,6 @@ DBlist<-readRDS(file="HCCinputs/DBlist.rds")
 #annotate edges from discovered networks
 #in the resulting data frame pcl denotes posterior probability of an edge in respective cluster
 intconstot<-annotateEdges(bnres,namesHCC,sump=1.2,minp=0.4,minkp=0.9,dblist=DBlist)
-head(intconstot)
 
 #plot neibouthoods of nodes
 library(igraph)
