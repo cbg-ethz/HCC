@@ -60,7 +60,7 @@ simBNclustcore<-function(rep,n=100,
   dflocal<-NULL
   #generate mixture
   bnmixt<-genMixture(k=k, type="mixed",centersignal="medium",
-                     sigma0=0.3, ssvec=ssvec, n=100, avpar=1, deltamu=20, lB=0.5, uB=1.5,
+                     sigma0=0.3, ssvec=ssvec, n=n, avpar=1, deltamu=20, lB=0.5, uB=1.5,
                      shdpct=30, randomseed=sseed, eqval=0,
                      mixedpar=mixedpar, signalroots=TRUE)
   metainfo<-list(rep=rep,seed=sseed,N=sum(bnmixt$ssvec)/k,dmu=20,shdpct=30,k=4)
@@ -98,6 +98,8 @@ simBNclustcore<-function(rep,n=100,
 
     res$accuracy<-rbind(res$accuracy,dflocal)
   }
+  res$FNrate=FNrate
+  res$FPrate=FPrate
   return(res)
 }
 
