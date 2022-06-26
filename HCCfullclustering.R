@@ -185,9 +185,7 @@ stdev<-c(0.1,0.5,2,1,2)
  HCCcontz<-Reduce('rbind',HCCfullz[c("T","P","PP")])
  HCCcontz<-t(HCCcontz)
 
- set.seed(100)
- iclustfit1<- iClusterPlus(dt1=t(HCCfullz$M),dt2=t(HCCfullz$CN),dt3=HCCcontz,
-                           type=c("binomial","gaussian","gaussian"),K=0, maxiter=20)
+
  set.seed(100)
  iclustfit2<- iClusterPlus(dt1=t(HCCfullz$M),dt2=t(HCCfullz$CN),dt3=HCCcontz,
                            type=c("binomial","gaussian","gaussian"),K=1, maxiter=20)
