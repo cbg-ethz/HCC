@@ -36,7 +36,7 @@ bnres<-bnclustOmics(HCCdata,namesHCC,HCCbl,HCCpm,epmatrix = TRUE,
                     baseprob=0.4,hardlim=6,deltahl=5,commonspace=TRUE)
 
 #load result, same as above
-bnres<-readRDS("/Users/polinasuter/Downloads/HCC/HCC/HCCresults/res_main.rds")
+bnres<-readRDS("HCCresults/res_main.rds")
 
 #other k
 #it is important that epmatrix=FALSE for below runs
